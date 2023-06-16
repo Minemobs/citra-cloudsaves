@@ -1,3 +1,8 @@
 api/app/build
 api/.gradle
 api/*.save
+api/bin
+
+website/node_modules
+website/dist
+website/package-lock.json

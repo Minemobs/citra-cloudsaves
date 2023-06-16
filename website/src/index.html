@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Citra CloudSaves</title>
+        <link
+            rel="stylesheet"
+            type="text/css"
+            media="screen"
+            href="/dist/style.css"
+        />
+        <script src="/dist/main.js" defer></script>
+    </head>
+    <body>
+        <div class="flex h-screen min-h-screen flex-col">
+            <header
+                class="flex flex-row items-start justify-evenly rounded-b-lg bg-indigo-400 p-4 shadow-sm"
+            >
+                <p
+                    class="mr-auto select-none self-start text-center"
+                    onclick="loginClicked(true)"
+                >
+                    Register
+                </p>
+                <p class="ml-auto mr-auto select-none text-center">
+                    Citra CloudSaves
+                </p>
+                <p
+                    class="ml-auto select-none self-start text-center"
+                    onclick="loginClicked(false)"
+                >
+                    Login
+                </p>
+            </header>
+            <div class="flex flex-grow items-center justify-center">
+                <dialog id="login">
+                    <div class="rounded-md bg-indigo-400 p-5 shadow-sm">
+                        <p class="select-none pb-5 text-center text-3xl">
+                            Login
+                        </p>
+                        <form
+                            class="preventOverflow flex flex-col gap-5"
+                            onsubmit="onSubmit(event); return false"
+                        >
+                            <div>
+                                <label for="username"> Username </label>
+                                <input
+                                    name="username"
+                                    required
+                                    minlength="4"
+                                    type="text"
+                                />
+                            </div>
+                            <div>
+                                <label for="username"> Password </label>
+                                <input
+                                    name="username"
+                                    required
+                                    minlength="8"
+                                    maxlength="20"
+                                    title="Enter a password of 8-20 characters (letters, digits, @,$,!,%)"
+                                    type="password"
+                                    pattern="[a-zA-Z0-9@$!%]{8,20}"
+                                />
+                            </div>
+                            <input
+                                type="submit"
+                                class="w-full pb-5 pt-10 shadow-md shadow-indigo-500 hover:shadow-xl hover:shadow-indigo-600"
+                                id="LoginButton"
+                            />
+                        </form>
+                    </div>
+                </dialog>
+            </div>
+            <footer
+                class="flex flex-row place-items-center justify-items-center rounded-t-lg bg-indigo-400 p-4 shadow-sm"
+            >
+                <p class="select-none pe-8">
+                    © 2023 <a href="https://github.com/minemobs">minemobs.</a>
+                </p>
+                <p class="ml-auto text-left">Not endorsed by Citra</p>
+            </footer>
+        </div>
+    </body>
+</html>
