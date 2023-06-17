@@ -5,13 +5,14 @@ onload = () => {
     login.parentElement!.append(register);
     (register.children[0]!.children[0]! as HTMLParagraphElement).textContent =
         "Register";
+    register.getElementsByClassName("no-account")[0].remove();
 };
 
 const loginClicked = (registration: boolean) => {
     const dialog = document.getElementById(
         registration ? "register" : "login"
     ) as HTMLDialogElement;
-    dialog.open = true;
+    dialog.showModal();
 };
 
 const onSubmit = (event: SubmitEvent) => {
@@ -23,14 +24,16 @@ const onSubmit = (event: SubmitEvent) => {
     const usernameElement = form.children[0].children[1] as HTMLInputElement;
     const passwordElement = form.children[1].children[1] as HTMLInputElement;
     //TODO: send this to a DB
-    hashPassword(passwordElement.value).then(hash => {
-        const username = usernameElement.value;
-        console.log(hash);
-    }).finally(() => {
-        usernameElement.value = "";
-        passwordElement.value = "";
-        dialog.open = false;
-    });
+    hashPassword(passwordElement.value)
+        .then((hash) => {
+            const username = usernameElement.value;
+            console.log(hash);
+        })
+        .finally(() => {
+            usernameElement.value = "";
+            passwordElement.value = "";
+            dialog.close();
+        });
     return false;
 };
 
@@ -42,4 +45,4 @@ const hashPassword = async (password: string) => {
         .map((bytes) => bytes.toString(16).padStart(2, "0"))
         .join("");
     return hashHex;
-}
+};
