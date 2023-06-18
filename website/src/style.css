@@ -9,3 +9,11 @@
     -moz-box-sizing: border-box;
     @apply rounded-lg;
 }
+
+p,
+h1,
+label,
+input,
+button {
+    @apply text-white;
+}

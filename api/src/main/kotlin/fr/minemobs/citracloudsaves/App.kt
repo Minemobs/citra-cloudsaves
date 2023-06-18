@@ -3,31 +3,113 @@
  */
 package fr.minemobs.citracloudsaves
 
+import com.google.gson.GsonBuilder
+import com.mongodb.client.model.Filters.and
+import com.mongodb.client.model.Filters.eq
 import io.javalin.Javalin
-import io.javalin.http.NotFoundResponse
 import io.javalin.http.BadRequestResponse
+import io.javalin.http.NotFoundResponse
+import io.javalin.http.util.NaiveRateLimit
+import org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers
+import org.jose4j.jwe.JsonWebEncryption
+import org.jose4j.jwe.KeyManagementAlgorithmIdentifiers
+import org.jose4j.keys.AesKey
+import org.jose4j.lang.ByteUtil
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
 
-fun main() {
-    val app = Javalin.create()
-        .post("save/{gameID}") {
-            val file = it.uploadedFile("save")
-            if(file == null) {
-                throw BadRequestResponse("Missin' the save file")
+
+object App {
+    val GSON = GsonBuilder().setPrettyPrinting().create()
+}
+
+fun getConfig() : MongoConnection.MongoConfig? {
+    val path = Path("secrets.json")
+    if(Files.notExists(path)) {
+        Files.writeString(path,
+            """
+            {
+                "username": "YOUR_DB_USERNAME",
+                "password": "YOUR_DB_PASSWORD",
+                "database": "users",
+                "collections": "user"
             }
+            """.trimIndent(), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+        return null
+    }
+    Files.newBufferedReader(path).use { return App.GSON.fromJson(it, MongoConnection.MongoConfig::class.java) }
+}
+
+fun createAndWriteKey(path: Path) : AesKey {
+    val bytes = ByteUtil.randomBytes(16)
+    Files.write(path, bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)
+    return AesKey(bytes)
+}
+
+fun getKey() : AesKey {
+    val path = Path(".key.txt")
+    if (Files.notExists(path)) {
+        return createAndWriteKey(path)
+    }
+    val bytes = Files.readAllBytes(path)
+    return if (bytes.size < 16) createAndWriteKey(path) else AesKey(bytes)
+}
+
+fun jweSerialize(key: AesKey, payload: String) : String {
+    val jwe = JsonWebEncryption()
+    jwe.key = key
+    jwe.algorithmHeaderValue = KeyManagementAlgorithmIdentifiers.A128KW
+    jwe.encryptionMethodHeaderParameter = ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256
+    //TODO
+    return "TODO"
+}
+
+fun main() {
+    val key = getKey()
+
+    val config = getConfig() ?: throw NullPointerException("Couldn't connect to the DB due to the 'secrets.json' secrets not being valid.")
+    val mongoClient = MongoConnection.createMongoClient(config)
+    val usersDB = mongoClient.getDatabase("users")
+    val collection = usersDB.getCollection("user", User::class.java)
+
+    val app = Javalin.create()
+        .post("register") {
+            NaiveRateLimit.requestPerTimeUnit(it, 1, TimeUnit.MINUTES)
+            val username = it.header("username")
+            val password = it.header("hashPassword")
+            if(username == null) throw BadRequestResponse("Your request is missing the 'username' header")
+            if(password == null) throw BadRequestResponse("Your request is missing the 'password' header")
+
+            val jwe = jweSerialize(key, "$username:$password")
+            collection.insertOne(User(username, password, jwe))
+            it.result("Your account has been created")
+        }
+        .post("login") {
+            NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
+            val username = it.header("username")
+            val password = it.header("hashPassword")
+            if(username == null) throw BadRequestResponse("Your request is missing the 'username' header")
+            if(password == null) throw BadRequestResponse("Your request is missing the 'password' header")
+
+            val user = collection.find(and(eq("username", username), eq("hashPassword", password))).firstOrNull() ?: throw NotFoundResponse("Wrong password or wrong username")
+        }
+        .post("save/{gameID}") {
+            NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
+            val file = it.uploadedFile("save") ?: throw BadRequestResponse("Missin' the save file")
             file.contentAndClose { content ->
                 Files.write(Path(it.pathParam("gameID") + ".save"), content.readBytes(), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
-                it.result("Recieved ur file!")
+                it.result("Received ur file!")
             }
         }
         .get("save/{gameID}") {
-            if(Files.exists(Path(it.pathParam("gameID") + ".save"))) {
-                val bytes = Files.readAllBytes(Path(it.pathParam("gameID") + ".save"))
-                it.result(bytes)
-            } else {
-                throw NotFoundResponse("Nahh mate, we couldn't find ur save")
-            }
+            NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
+            val path = Path(it.pathParam("gameID") + ".save")
+            if(Files.notExists(path)) throw NotFoundResponse("Nahh mate, we couldn't find ur save")
+            val bytes = Files.readAllBytes(Path(it.pathParam("gameID") + ".save"))
+            it.result(bytes)
         }.start(8080)
+    mongoClient.close()
 }

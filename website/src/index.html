@@ -14,11 +14,11 @@
     <body>
         <div class="flex h-screen min-h-screen flex-col">
             <header
-                class="flex flex-row items-start justify-evenly rounded-b-lg bg-indigo-400 p-4 shadow-sm">
+                class="flex flex-row items-start justify-evenly rounded-b-lg bg-indigo-500 p-4 shadow-sm">
                 <div class="mr-auto"></div>
-                <p class="ml-auto mr-auto select-none text-center">
+                <h1 class="ml-auto mr-auto select-none text-center text-lg">
                     Citra CloudSaves
-                </p>
+                </h1>
                 <p
                     class="ml-auto select-none self-start text-center"
                     onclick="loginClicked(false)">
@@ -56,15 +56,15 @@
                                     type="password"
                                     pattern="[a-zA-Z0-9@$!%]{8,20}" />
                             </div>
-                            <div class="flex flex-row">
+                            <div class="no-account flex flex-row">
                                 <div class="flex-1"></div>
                                 <button
-                                class="no-account flex-0"
-                                type="button"
-                                onclick="document.getElementById('login').close(); loginClicked(true)">
-                                No account ?
-                            </button>
-                            <div class="flex-1"></div>
+                                    class="flex-0"
+                                    type="button"
+                                    onclick="document.getElementById('login').close(); loginClicked(true)">
+                                    No account ?
+                                </button>
+                                <div class="flex-1"></div>
                             </div>
                             <input
                                 type="submit"
@@ -75,11 +75,13 @@
                 </dialog>
             </div>
             <footer
-                class="flex flex-row place-items-center justify-items-center rounded-t-lg bg-indigo-400 p-4 shadow-sm">
+                class="flex flex-row place-items-center justify-items-center rounded-t-lg bg-indigo-500 p-4 shadow-sm">
                 <p class="select-none pe-8">
                     © 2023 <a href="https://github.com/minemobs">minemobs.</a>
                 </p>
-                <p class="ml-auto text-left">Not endorsed by Citra</p>
+                <p class="ml-auto select-none text-left">
+                    Not endorsed by Citra
+                </p>
             </footer>
         </div>
     </body>

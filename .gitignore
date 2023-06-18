@@ -7,3 +7,4 @@ website/node_modules
 website/dist
 website/package-lock.json
 website/src/*.js
+website/.vscode
