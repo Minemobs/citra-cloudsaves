@@ -3,27 +3,27 @@
  */
 package fr.minemobs.citracloudsaves
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.mongodb.client.model.Filters.and
 import com.mongodb.client.model.Filters.eq
+import fr.minemobs.citracloudsaves.JWTUtils.getKey
+import fr.minemobs.citracloudsaves.JWTUtils.jweSerialize
+import fr.minemobs.citracloudsaves.RequestUtils.getAuthorizationToken
+import fr.minemobs.citracloudsaves.RequestUtils.getUser
 import io.javalin.Javalin
 import io.javalin.http.BadRequestResponse
+import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.util.NaiveRateLimit
-import org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers
-import org.jose4j.jwe.JsonWebEncryption
-import org.jose4j.jwe.KeyManagementAlgorithmIdentifiers
-import org.jose4j.keys.AesKey
-import org.jose4j.lang.ByteUtil
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
 
 
 object App {
-    val GSON = GsonBuilder().setPrettyPrinting().create()
+    val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
 }
 
 fun getConfig() : MongoConnection.MongoConfig? {
@@ -43,30 +43,6 @@ fun getConfig() : MongoConnection.MongoConfig? {
     Files.newBufferedReader(path).use { return App.GSON.fromJson(it, MongoConnection.MongoConfig::class.java) }
 }
 
-fun createAndWriteKey(path: Path) : AesKey {
-    val bytes = ByteUtil.randomBytes(16)
-    Files.write(path, bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)
-    return AesKey(bytes)
-}
-
-fun getKey() : AesKey {
-    val path = Path(".key.txt")
-    if (Files.notExists(path)) {
-        return createAndWriteKey(path)
-    }
-    val bytes = Files.readAllBytes(path)
-    return if (bytes.size < 16) createAndWriteKey(path) else AesKey(bytes)
-}
-
-fun jweSerialize(key: AesKey, payload: String) : String {
-    val jwe = JsonWebEncryption()
-    jwe.key = key
-    jwe.algorithmHeaderValue = KeyManagementAlgorithmIdentifiers.A128KW
-    jwe.encryptionMethodHeaderParameter = ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256
-    //TODO
-    return "TODO"
-}
-
 fun main() {
     val key = getKey()
 
@@ -78,26 +54,23 @@ fun main() {
     val app = Javalin.create()
         .post("register") {
             NaiveRateLimit.requestPerTimeUnit(it, 1, TimeUnit.MINUTES)
-            val username = it.header("username")
-            val password = it.header("hashPassword")
-            if(username == null) throw BadRequestResponse("Your request is missing the 'username' header")
-            if(password == null) throw BadRequestResponse("Your request is missing the 'password' header")
-
-            val jwe = jweSerialize(key, "$username:$password")
-            collection.insertOne(User(username, password, jwe))
-            it.result("Your account has been created")
+            val user = getUser(it)
+            collection.insertOne(user)
+            val jwe = jweSerialize(key, user)
+            it.result(jwe)
         }
         .post("login") {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
-            val username = it.header("username")
-            val password = it.header("hashPassword")
-            if(username == null) throw BadRequestResponse("Your request is missing the 'username' header")
-            if(password == null) throw BadRequestResponse("Your request is missing the 'password' header")
-
-            val user = collection.find(and(eq("username", username), eq("hashPassword", password))).firstOrNull() ?: throw NotFoundResponse("Wrong password or wrong username")
+            val tempUser = getUser(it)
+            val user = collection.find(and(eq("username", tempUser.username), eq("hashPassword", tempUser.hashPassword)))
+                .firstOrNull() ?: throw NotFoundResponse("Wrong password or wrong username")
+            val jwe = jweSerialize(key, user)
+            it.result(jwe)
         }
         .post("save/{gameID}") {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
+            val token = getAuthorizationToken(it)
+
             val file = it.uploadedFile("save") ?: throw BadRequestResponse("Missin' the save file")
             file.contentAndClose { content ->
                 Files.write(Path(it.pathParam("gameID") + ".save"), content.readBytes(), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
@@ -106,6 +79,8 @@ fun main() {
         }
         .get("save/{gameID}") {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
+            val token = getAuthorizationToken(it)
+
             val path = Path(it.pathParam("gameID") + ".save")
             if(Files.notExists(path)) throw NotFoundResponse("Nahh mate, we couldn't find ur save")
             val bytes = Files.readAllBytes(Path(it.pathParam("gameID") + ".save"))
