@@ -18,6 +18,7 @@ object JWTUtils {
         return AesKey(bytes)
     }
 
+    @JvmSynthetic
     internal fun getKey() : AesKey {
         val path = Path(".key.txt")
         if (Files.notExists(path)) {
@@ -27,8 +28,10 @@ object JWTUtils {
         return if (bytes.size < 16) createAndWriteKey(path) else AesKey(bytes)
     }
 
+    @JvmSynthetic
     internal fun jweSerialize(key: AesKey, user: User) : String {
         val jwe = JsonWebEncryption()
+
         jwe.key = key
         jwe.algorithmHeaderValue = KeyManagementAlgorithmIdentifiers.A128KW
         jwe.encryptionMethodHeaderParameter = ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256
@@ -36,6 +39,8 @@ object JWTUtils {
         return jwe.compactSerialization
     }
 
+    @Suppress("unused")
+    @JvmSynthetic
     internal fun jweDeserialize(key: AesKey, serializedUser: String) : User {
         val jwe = JsonWebEncryption()
         jwe.key = key

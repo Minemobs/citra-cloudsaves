@@ -13,7 +13,6 @@
 p,
 h1,
 label,
-input,
 button {
     @apply text-white;
 }
