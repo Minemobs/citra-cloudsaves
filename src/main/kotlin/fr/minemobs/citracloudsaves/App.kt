@@ -19,12 +19,14 @@ import kotlin.io.path.Path
 object App {
     @JvmSynthetic
     val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
+
     @JvmSynthetic
-    internal fun getConfig() : MongoConnection.MongoConfig? {
+    internal fun getConfig(): MongoConnection.MongoConfig? {
         val path = Path("secrets.json")
-        if(Files.notExists(path)) {
-            Files.writeString(path,
-            """
+        if (Files.notExists(path)) {
+            Files.writeString(
+                path,
+                """
             {
                 "host": "localhost"
                 "username": "YOUR_DB_USERNAME",
@@ -32,7 +34,8 @@ object App {
                 "database": "users",
                 "collection": "user"
             }
-            """.trimIndent(), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+            """.trimIndent(), StandardOpenOption.CREATE, StandardOpenOption.WRITE
+            )
             return null
         }
         Files.newBufferedReader(path).use {
@@ -50,7 +53,8 @@ object App {
 
 fun main() {
     val algorithm = getAlgorithm()
-    val config = App.getConfig() ?: throw NullPointerException("Couldn't connect to the DB due to the 'secrets.json' secrets not being valid.")
+    val config = App.getConfig()
+        ?: throw NullPointerException("Couldn't connect to the DB due to the 'secrets.json' secrets not being valid.")
     val mongoClient = MongoConnection.createMongoClient(config)
     val usersDB = mongoClient.getDatabase("users")
     val collection = usersDB.getCollection("user")
@@ -58,9 +62,15 @@ fun main() {
     Javalin.create { conf ->
         conf.staticFiles.add {
             it.hostedPath = "/"
-            it.directory = "/website"
+            it.directory = "/website/src"
             it.location = Location.CLASSPATH
             it.precompress = true
+        }
+        conf.staticFiles.add {
+            it.hostedPath = "/dist"
+            it.directory = "/website/dist"
+            it.location = Location.CLASSPATH
+            it.precompress = false
         }
     }
         .post("register") {
@@ -73,7 +83,8 @@ fun main() {
         .post("login") {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
             val tempUser = getUser(it)
-            val user = collection.find(tempUser.filters()).firstOrNull() ?: throw NotFoundResponse("Wrong username or password")
+            val user = collection.find(tempUser.filters()).firstOrNull()
+                ?: throw NotFoundResponse("Wrong username or password")
             val token = getToken(algorithm, User.fromDocument(user))
             it.result(token)
         }
@@ -83,7 +94,13 @@ fun main() {
 
             val file = it.uploadedFile("save") ?: throw BadRequestResponse("Missin' the save file")
             file.contentAndClose { content ->
-                Files.write(Path(it.pathParam("gameID") + ".save"), content.readBytes(), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+                Files.write(
+                    Path(it.pathParam("gameID") + ".save"),
+                    content.readBytes(),
+                    StandardOpenOption.WRITE,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.CREATE
+                )
                 it.result("Received ur file!")
             }
         }
@@ -92,9 +109,8 @@ fun main() {
             //val token = getAuthorizationToken(it)
 
             val path = Path(it.pathParam("gameID") + ".save")
-            if(Files.notExists(path)) throw NotFoundResponse("Nahh mate, we couldn't find ur save")
+            if (Files.notExists(path)) throw NotFoundResponse("Nahh mate, we couldn't find ur save")
             val bytes = Files.readAllBytes(Path(it.pathParam("gameID") + ".save"))
             it.result(bytes)
         }.start(8080)
-    mongoClient.close()
 }

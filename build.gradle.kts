@@ -20,6 +20,8 @@ dependencies {
     //Auth
     implementation("com.auth0:java-jwt:4.4.0")
     implementation("at.favre.lib:bcrypt:0.10.2")
+    //Tests
+    testImplementation("com.github.kittinunf.fuel:fuel:3.0.0-alpha1")
 }
 
 testing {
