@@ -1,5 +1,6 @@
 //TO EDIT
-const API_URL = "https://localhost:8888"
+//TODO: Put that back to https
+const API_URL = "http://localhost:8888/"
 
 onload = () => {
     const login = document.getElementById("login") as HTMLDialogElement;
@@ -18,18 +19,30 @@ const loginClicked = (registration: boolean) => {
     dialog.showModal();
 };
 
+const handleRequest = async (registration: boolean, username: string, password: string) => {
+    let headers = new Headers();
+    headers.append("username", username);
+    headers.append("password", password);
+    return await fetch(API_URL + (registration ? "register" : "login"), {
+        method: "POST",
+        headers: headers,
+    });
+}
+
 const onSubmit = (event: SubmitEvent) => {
     const form = event.submitter!.parentElement! as HTMLFormElement;
     const dialog = event.submitter!.parentElement!.parentElement!
         .parentElement as HTMLDialogElement;
-    // noinspection JSUnusedLocalSymbols
     const registration = dialog.id === "register";
 
     const usernameElement = form.children[0].children[1] as HTMLInputElement;
     const passwordElement = form.children[1].children[1] as HTMLInputElement;
-    //TODO: send this to a DB
-    usernameElement.value = "";
-    passwordElement.value = "";
-    dialog.close();
+
+    const onHandleRequest = (value: Response, error: void | PromiseLike<void>) => {
+        usernameElement.value = "";
+        passwordElement.value = "";
+        dialog.close();
+    }
+    handleRequest(registration, usernameElement.value, passwordElement.value).then(onHandleRequest);
     return false;
 };

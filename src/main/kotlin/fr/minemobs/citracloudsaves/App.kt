@@ -75,7 +75,12 @@ fun main() {
     }
         .post("register") {
             NaiveRateLimit.requestPerTimeUnit(it, 1, TimeUnit.MINUTES)
+            //TODO: Do username and password verifications
             val user = getUser(it)
+            if(collection.find(user.filters()).firstOrNull() != null) {
+                it.status(400).result("already exist")
+                return@post
+            }
             collection.insertOne(user.toDocument())
             val token = getToken(algorithm, user)
             it.status(201).result(token)
@@ -112,5 +117,5 @@ fun main() {
             if (Files.notExists(path)) throw NotFoundResponse("Nahh mate, we couldn't find ur save")
             val bytes = Files.readAllBytes(Path(it.pathParam("gameID") + ".save"))
             it.result(bytes)
-        }.start(8080)
+        }.start(8888)
 }
