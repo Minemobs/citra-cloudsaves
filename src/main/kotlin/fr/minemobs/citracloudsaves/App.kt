@@ -3,9 +3,8 @@ package fr.minemobs.citracloudsaves
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
-import fr.minemobs.citracloudsaves.JWTUtils.getKey
-import fr.minemobs.citracloudsaves.JWTUtils.jweSerialize
-import fr.minemobs.citracloudsaves.RequestUtils.getAuthorizationToken
+import fr.minemobs.citracloudsaves.JWTUtils.getAlgorithm
+import fr.minemobs.citracloudsaves.JWTUtils.getToken
 import fr.minemobs.citracloudsaves.RequestUtils.getUser
 import io.javalin.Javalin
 import io.javalin.http.BadRequestResponse
@@ -50,13 +49,13 @@ object App {
 }
 
 fun main() {
-    val key = getKey()
+    val algorithm = getAlgorithm()
     val config = App.getConfig() ?: throw NullPointerException("Couldn't connect to the DB due to the 'secrets.json' secrets not being valid.")
     val mongoClient = MongoConnection.createMongoClient(config)
     val usersDB = mongoClient.getDatabase("users")
     val collection = usersDB.getCollection("user")
 
-    val app = Javalin.create { conf ->
+    Javalin.create { conf ->
         conf.staticFiles.add {
             it.hostedPath = "/"
             it.directory = "/website"
@@ -68,19 +67,19 @@ fun main() {
             NaiveRateLimit.requestPerTimeUnit(it, 1, TimeUnit.MINUTES)
             val user = getUser(it)
             collection.insertOne(user.toDocument())
-            val jwe = jweSerialize(key, user)
-            it.status(201).result(jwe)
+            val token = getToken(algorithm, user)
+            it.status(201).result(token)
         }
         .post("login") {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
             val tempUser = getUser(it)
             val user = collection.find(tempUser.filters()).firstOrNull() ?: throw NotFoundResponse("Wrong username or password")
-            val jwe = jweSerialize(key, User.fromDocument(user))
-            it.result(jwe)
+            val token = getToken(algorithm, User.fromDocument(user))
+            it.result(token)
         }
         .post("save/{gameID}") {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
-            val token = getAuthorizationToken(it)
+            //val token = getAuthorizationToken(it)
 
             val file = it.uploadedFile("save") ?: throw BadRequestResponse("Missin' the save file")
             file.contentAndClose { content ->
@@ -90,7 +89,7 @@ fun main() {
         }
         .get("save/{gameID}") {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
-            val token = getAuthorizationToken(it)
+            //val token = getAuthorizationToken(it)
 
             val path = Path(it.pathParam("gameID") + ".save")
             if(Files.notExists(path)) throw NotFoundResponse("Nahh mate, we couldn't find ur save")

@@ -11,14 +11,15 @@ repositories {
 }
 
 dependencies {
+    //HTTP
     implementation("io.javalin:javalin:5.6.0")
-    implementation("org.mongodb:mongodb-driver-sync:4.9.1")
     implementation("org.slf4j:slf4j-simple:2.0.7")
+    //DB
+    implementation("org.mongodb:mongodb-driver-sync:4.9.1")
     implementation("com.google.code.gson:gson:2.10.1")
-    implementation("org.bitbucket.b_c:jose4j:0.9.3")
+    //Auth
+    implementation("com.auth0:java-jwt:4.4.0")
     implementation("at.favre.lib:bcrypt:0.10.2")
-    testImplementation("io.mockk:mockk:1.13.4")
-    testImplementation("org.assertj:assertj-core:3.24.2")
 }
 
 testing {
