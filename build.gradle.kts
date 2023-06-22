@@ -1,9 +1,26 @@
+import com.github.gradle.node.npm.task.NpmTask
+
 plugins {
     id("org.jetbrains.kotlin.jvm") version "1.8.21"
     id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.github.node-gradle.node") version "5.0.0"
 
     application
     eclipse
+}
+
+node {
+    nodeProjectDir.set(File(project.projectDir, "src/main/resources"))
+}
+
+tasks.register("run-dev", NpmTask::class) {
+    this.args.set(arrayListOf("run", "build"))
+}
+
+tasks.processResources {
+    dependsOn(tasks.npmInstall, tasks.getByName("run-dev"))
+    filesNotMatching(arrayListOf("src/index.html", "dist/*")) { this.exclude() }
+    exclude(".vscode", "node_modules")
 }
 
 repositories {

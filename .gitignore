@@ -1,10 +1,12 @@
-bin/
 build/
-/.gradle/
+.gradle/
+
+bin/
 .idea/
 .settings/
 .project
-/.classpath
+.classpath
+
 secrets.json
 .key.txt
-/.key.pub
+.key.pub

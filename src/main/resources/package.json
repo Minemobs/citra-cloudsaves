@@ -6,7 +6,8 @@
   "scripts": {
     "tailwind": "npx tailwindcss -m -i ./src/style.css -o ./dist/style.css --watch",
     "typescript": "npx tsc --watch",
-    "dev": "npm-run-all -p -r tailwind typescript"
+    "dev": "npm-run-all -p -r tailwind typescript",
+    "build": "npx tailwindcss -m -i ./src/style.css -o ./dist/style.css; npx tsc"
   },
   "repository": {
     "type": "git",

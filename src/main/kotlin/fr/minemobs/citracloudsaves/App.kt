@@ -62,13 +62,13 @@ fun main() {
     Javalin.create { conf ->
         conf.staticFiles.add {
             it.hostedPath = "/"
-            it.directory = "/website/src"
+            it.directory = "/src"
             it.location = Location.CLASSPATH
             it.precompress = true
         }
         conf.staticFiles.add {
             it.hostedPath = "/dist"
-            it.directory = "/website/dist"
+            it.directory = "/dist"
             it.location = Location.CLASSPATH
             it.precompress = false
         }
