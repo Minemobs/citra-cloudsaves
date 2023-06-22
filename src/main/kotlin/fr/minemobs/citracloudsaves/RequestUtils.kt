@@ -20,7 +20,7 @@ object RequestUtils {
 
     @Throws(BadRequestResponse::class)
     fun getAuthorizationToken(ctx: Context) : String {
-        val authorization = ctx.header("authorization") ?: throw BadRequestResponse("Missin' the authorization header")
+        val authorization = ctx.header("Authorization") ?: throw BadRequestResponse("Missin' the authorization header")
         val bearer = authorization.split(" ")
         if (bearer.size != 2 || bearer[0] != "Bearer") throw BadRequestResponse("Wrong authorization header")
         return bearer[1]

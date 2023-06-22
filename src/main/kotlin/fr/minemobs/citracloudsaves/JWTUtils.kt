@@ -3,9 +3,15 @@ package fr.minemobs.citracloudsaves
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.exceptions.JWTCreationException
+import com.auth0.jwt.exceptions.JWTDecodeException
 import com.auth0.jwt.interfaces.DecodedJWT
+import io.javalin.http.BadRequestResponse
+import io.javalin.http.Context
+import io.javalin.http.UnauthorizedResponse
+import io.javalin.http.util.NaiveRateLimit
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
@@ -17,6 +23,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
 
 object JWTUtils {
@@ -29,6 +36,9 @@ object JWTUtils {
     @Throws(IOException::class, InvalidKeySpecException::class, NoSuchAlgorithmException::class)
     private fun getPublicKey() = KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(Files.readAllBytes(Path(".key.pub"))))
 
+    @JvmSynthetic
+    @Throws(JWTDecodeException::class)
+    private fun decodeAndVerify(token: String, algorithm: Algorithm) = JWT.decode(token).verifyToken(algorithm)
 
     @JvmSynthetic
     @Throws(NoSuchAlgorithmException::class, IllegalArgumentException::class)
@@ -56,13 +66,23 @@ object JWTUtils {
             .sign(algorithm)
     }
 
-    fun verifyToken(algorithm: Algorithm, decodedJWT: DecodedJWT): DecodedJWT? {
+    fun DecodedJWT.verifyToken(algorithm: Algorithm): DecodedJWT? {
         return try {
             JWT.require(algorithm)
                 .withIssuer("minemobs")
-                .build().verify(decodedJWT)
+                .build().verify(this)
         } catch (e : Exception) {
             null
         }
+    }
+
+    fun initSaveRequest(ctx: Context, algorithm: Algorithm, saveDir: Path) : Pair<User, Path> {
+        NaiveRateLimit.requestPerTimeUnit(ctx, 3, TimeUnit.MINUTES)
+        if(!ctx.pathParam("gameID").matches(Regex("\\d+"))) throw BadRequestResponse("gameID doesn't match '\\d+'")
+        val token = decodeAndVerify(RequestUtils.getAuthorizationToken(ctx), algorithm) ?: throw UnauthorizedResponse("Unknown token")
+        val user = User.fromJWT(token)
+        val gameSaveDir = saveDir.resolve(ctx.pathParam("gameID"))
+        if(Files.notExists(gameSaveDir)) Files.createDirectory(gameSaveDir)
+        return user to gameSaveDir
     }
 }

@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import fr.minemobs.citracloudsaves.JWTUtils.getAlgorithm
 import fr.minemobs.citracloudsaves.JWTUtils.getToken
+import fr.minemobs.citracloudsaves.JWTUtils.initSaveRequest
 import fr.minemobs.citracloudsaves.RequestUtils.getUser
 import io.javalin.Javalin
 import io.javalin.http.BadRequestResponse
@@ -52,6 +53,10 @@ object App {
 }
 
 fun main() {
+    val saveDir = Path("saves")
+    if(Files.notExists(saveDir)) {
+        Files.createDirectory(saveDir)
+    }
     val algorithm = getAlgorithm()
     val config = App.getConfig()
         ?: throw NullPointerException("Couldn't connect to the DB due to the 'secrets.json' secrets not being valid.")
@@ -75,12 +80,8 @@ fun main() {
     }
         .post("register") {
             NaiveRateLimit.requestPerTimeUnit(it, 1, TimeUnit.MINUTES)
-            //TODO: Do username and password verifications
             val user = getUser(it)
-            if(collection.find(user.filters()).firstOrNull() != null) {
-                it.status(400).result("already exist")
-                return@post
-            }
+            if(collection.find(user.filters()).firstOrNull() != null) throw BadRequestResponse("User already exists")
             collection.insertOne(user.toDocument())
             val token = getToken(algorithm, user)
             it.status(201).result(token)
@@ -94,13 +95,12 @@ fun main() {
             it.result(token)
         }
         .post("save/{gameID}") {
-            NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
-            //val token = getAuthorizationToken(it)
+            val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
 
             val file = it.uploadedFile("save") ?: throw BadRequestResponse("Missin' the save file")
             file.contentAndClose { content ->
                 Files.write(
-                    Path(it.pathParam("gameID") + ".save"),
+                    gameSaveDir.resolve("${user.username}.save"),
                     content.readBytes(),
                     StandardOpenOption.WRITE,
                     StandardOpenOption.TRUNCATE_EXISTING,
@@ -110,12 +110,15 @@ fun main() {
             }
         }
         .get("save/{gameID}") {
-            NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
-            //val token = getAuthorizationToken(it)
-
-            val path = Path(it.pathParam("gameID") + ".save")
+            val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
+            val path = gameSaveDir.resolve("${user.username}.save")
             if (Files.notExists(path)) throw NotFoundResponse("Nahh mate, we couldn't find ur save")
-            val bytes = Files.readAllBytes(Path(it.pathParam("gameID") + ".save"))
+            val bytes = Files.readAllBytes(saveDir.resolve(it.pathParam("gameID")).resolve("${user.username}.save"))
             it.result(bytes)
+        }.delete("save/{gameID}") {
+            val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
+            val path = gameSaveDir.resolve("${user.username}.save")
+            if (!Files.deleteIfExists(path)) throw NotFoundResponse("Nahh mate, we couldn't find ur save")
+            it.result("Deleted your save")
         }.start(8888)
 }
