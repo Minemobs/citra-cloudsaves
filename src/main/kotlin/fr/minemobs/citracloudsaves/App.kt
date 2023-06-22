@@ -7,6 +7,7 @@ import fr.minemobs.citracloudsaves.JWTUtils.getAlgorithm
 import fr.minemobs.citracloudsaves.JWTUtils.getToken
 import fr.minemobs.citracloudsaves.JWTUtils.initSaveRequest
 import fr.minemobs.citracloudsaves.RequestUtils.getUser
+import fr.minemobs.citracloudsaves.RequestUtils.verifyPassword
 import io.javalin.Javalin
 import io.javalin.http.BadRequestResponse
 import io.javalin.http.NotFoundResponse
@@ -91,6 +92,7 @@ fun main() {
             val tempUser = getUser(it)
             val user = collection.find(tempUser.filters()).firstOrNull()
                 ?: throw NotFoundResponse("Wrong username or password")
+            if(!verifyPassword(it, user)) throw NotFoundResponse("Wrong username or password")
             val token = getToken(algorithm, User.fromDocument(user))
             it.result(token)
         }

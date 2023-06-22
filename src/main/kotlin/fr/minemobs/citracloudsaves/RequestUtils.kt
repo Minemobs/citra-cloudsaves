@@ -5,11 +5,16 @@ import at.favre.lib.crypto.bcrypt.BCrypt.Version
 import at.favre.lib.crypto.bcrypt.LongPasswordStrategies
 import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
+import org.bson.Document
 
 object RequestUtils {
 
+    @JvmSynthetic
     private val HASHER: BCrypt.Hasher = BCrypt.with(LongPasswordStrategies.truncate(Version.VERSION_2A))
+    @JvmSynthetic
     private val VERIFYER: BCrypt.Verifyer = BCrypt.verifyer(Version.VERSION_2A, LongPasswordStrategies.truncate(Version.VERSION_2A))
+
+    fun verifyPassword(ctx: Context, user: Document) = VERIFYER.verifyStrict(ctx.header("password")!!.toCharArray(), user.getString("password").toCharArray()).verified
 
     @Throws(BadRequestResponse::class)
     fun getUser(ctx: Context) : User {
