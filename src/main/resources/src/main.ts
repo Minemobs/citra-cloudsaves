@@ -1,6 +1,15 @@
 //TO EDIT
 //TODO: Put that back to https
-const API_URL = "http://localhost:8888/"
+const API_URL = "http://localhost:8888/";
+
+const isNotNull = <T>(
+    obj: T,
+    callback: (obj: NonNullable<T>) => void,
+    errorMessage: string
+) => {
+    if (obj == null) throw new Error(errorMessage);
+    callback(obj);
+};
 
 onload = () => {
     const login = document.getElementById("login") as HTMLDialogElement;
@@ -19,7 +28,11 @@ const loginClicked = (registration: boolean) => {
     dialog.showModal();
 };
 
-const handleRequest = async (registration: boolean, username: string, password: string) => {
+const handleRequest = async (
+    registration: boolean,
+    username: string,
+    password: string
+) => {
     let headers = new Headers();
     headers.append("username", username);
     headers.append("password", password);
@@ -27,7 +40,7 @@ const handleRequest = async (registration: boolean, username: string, password: 
         method: "POST",
         headers: headers,
     });
-}
+};
 
 const onSubmit = (event: SubmitEvent) => {
     const form = event.submitter!.parentElement! as HTMLFormElement;
@@ -38,11 +51,23 @@ const onSubmit = (event: SubmitEvent) => {
     const usernameElement = form.children[0].children[1] as HTMLInputElement;
     const passwordElement = form.children[1].children[1] as HTMLInputElement;
 
-    const onHandleRequest = (value: Response, error: void | PromiseLike<void>) => {
-        usernameElement.value = "";
-        passwordElement.value = "";
-        dialog.close();
-    }
-    handleRequest(registration, usernameElement.value, passwordElement.value).then(onHandleRequest);
+    handleRequest(registration, usernameElement.value, passwordElement.value)
+        .then((response) => {
+            //TODO: handle HTTP error codes
+            isNotNull(
+                document.getElementById("token-div"),
+                (div) => (div.style.display = ""),
+                "Element token-div is null"
+            );
+            isNotNull(
+                document.getElementById("token"),
+                async (p) => (p.textContent = await response.text()),
+                "Element token is null"
+            );
+            usernameElement.value = "";
+            passwordElement.value = "";
+            dialog.close();
+        })
+        .catch(() => {});
     return false;
 };
