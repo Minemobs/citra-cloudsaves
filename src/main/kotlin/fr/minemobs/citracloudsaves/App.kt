@@ -3,14 +3,15 @@ package fr.minemobs.citracloudsaves
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
+import fr.minemobs.citracloudsaves.Error.Companion.badRequestResponse
+import fr.minemobs.citracloudsaves.Error.Companion.notFoundResponse
 import fr.minemobs.citracloudsaves.JWTUtils.getAlgorithm
 import fr.minemobs.citracloudsaves.JWTUtils.getToken
 import fr.minemobs.citracloudsaves.JWTUtils.initSaveRequest
 import fr.minemobs.citracloudsaves.RequestUtils.getUser
 import fr.minemobs.citracloudsaves.RequestUtils.verifyPassword
 import io.javalin.Javalin
-import io.javalin.http.BadRequestResponse
-import io.javalin.http.NotFoundResponse
+import io.javalin.http.ContentType
 import io.javalin.http.staticfiles.Location
 import io.javalin.http.util.NaiveRateLimit
 import java.nio.file.Files
@@ -55,9 +56,7 @@ object App {
 
 fun main() {
     val saveDir = Path("saves")
-    if(Files.notExists(saveDir)) {
-        Files.createDirectory(saveDir)
-    }
+    if(Files.notExists(saveDir)) Files.createDirectory(saveDir)
     val algorithm = getAlgorithm()
     val config = App.getConfig()
         ?: throw NullPointerException("Couldn't connect to the DB due to the 'secrets.json' secrets not being valid.")
@@ -65,7 +64,7 @@ fun main() {
     val usersDB = mongoClient.getDatabase("users")
     val collection = usersDB.getCollection("user")
 
-    Javalin.create { conf ->
+    val app = Javalin.create { conf ->
         conf.staticFiles.add {
             it.hostedPath = "/"
             it.directory = "/src"
@@ -82,7 +81,7 @@ fun main() {
         .post("register") {
             NaiveRateLimit.requestPerTimeUnit(it, 1, TimeUnit.MINUTES)
             val user = getUser(it)
-            if(collection.find(user.filters()).firstOrNull() != null) throw BadRequestResponse("User already exists")
+            if(collection.find(user.filters()).firstOrNull() != null) throw badRequestResponse(Error.USER_ALREADY_EXISTS)
             collection.insertOne(user.toDocument())
             val token = getToken(algorithm, user)
             it.status(201).result(token)
@@ -91,15 +90,15 @@ fun main() {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
             val tempUser = getUser(it)
             val user = collection.find(tempUser.filters()).firstOrNull()
-                ?: throw NotFoundResponse("Wrong username or password")
-            if(!verifyPassword(it, user)) throw NotFoundResponse("Wrong username or password")
+                ?: throw notFoundResponse(Error.INVALID_AUTH)
+            if(!verifyPassword(it, user)) throw notFoundResponse(Error.INVALID_AUTH)
             val token = getToken(algorithm, User.fromDocument(user))
             it.result(token)
         }
         .post("save/{gameID}") {
             val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
 
-            val file = it.uploadedFile("save") ?: throw BadRequestResponse("Missin' the save file")
+            val file = it.uploadedFile("save") ?: throw badRequestResponse(Error.REQUEST_MISSING_SAVE_FILE)
             file.contentAndClose { content ->
                 Files.write(
                     gameSaveDir.resolve("${user.username}.save"),
@@ -114,13 +113,15 @@ fun main() {
         .get("save/{gameID}") {
             val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
             val path = gameSaveDir.resolve("${user.username}.save")
-            if (Files.notExists(path)) throw NotFoundResponse("Nahh mate, we couldn't find ur save")
+            if (Files.notExists(path)) throw notFoundResponse(Error.COULDNT_FIND_SAVE)
             val bytes = Files.readAllBytes(saveDir.resolve(it.pathParam("gameID")).resolve("${user.username}.save"))
-            it.result(bytes)
+            it.contentType(ContentType.OCTET_STREAM).result(bytes)
         }.delete("save/{gameID}") {
             val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
             val path = gameSaveDir.resolve("${user.username}.save")
-            if (!Files.deleteIfExists(path)) throw NotFoundResponse("Nahh mate, we couldn't find ur save")
+            if (!Files.deleteIfExists(path)) throw notFoundResponse(Error.COULDNT_FIND_SAVE)
             it.result("Deleted your save")
-        }.start(8888)
+        }.events { it.serverStopping { mongoClient.close() } }
+    Runtime.getRuntime().addShutdownHook(Thread { app.stop() })
+    app.start(8888)
 }
