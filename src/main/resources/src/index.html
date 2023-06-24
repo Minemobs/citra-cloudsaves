@@ -3,14 +3,18 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="description"
+            content="Citra CloudSaves is a service to host your game saves on a server a restore them later on an other device. This is not affiliated with Citra" />
         <title>Citra CloudSaves</title>
         <link
             rel="stylesheet"
             type="text/css"
             media="screen"
-            href="/dist/style.css" />
-        <script src="/dist/main.js" defer></script>
+            href="style.css" />
+        <script src="main.js" defer></script>
     </head>
+
     <body>
         <div class="flex h-screen min-h-screen flex-col">
             <header
@@ -26,10 +30,14 @@
                 </p>
             </header>
             <div class="flex flex-grow items-center justify-center">
-                <div id="token-div" class="flex flex-1 justify-center items-center" style="display: none;">
-                    <p class="text-black text-center ml-5">Token: </p>
-                    <div class="w-96 ml-4 p-2 rounded-md transition-all drop-shadow-md blur-md hover:blur-none bg-slate-100">
-                        <span class="text-black break-words" id="token"></span>
+                <div
+                    id="token-div"
+                    class="flex flex-1 items-center justify-center"
+                    style="display: none">
+                    <p class="ml-5 text-center text-black">Token:</p>
+                    <div
+                        class="ml-4 mr-10 rounded-md bg-slate-100 p-2 blur-md drop-shadow-md transition-all hover:blur-none">
+                        <span class="break-all text-black" id="token"></span>
                     </div>
                 </div>
                 <dialog
@@ -40,7 +48,7 @@
                             Login
                         </p>
                         <form
-                            class="preventOverflow flex flex-col gap-5"
+                            class="box-border rounded-lg w-[100%] flex flex-col gap-5"
                             onsubmit="onSubmit(event); return false">
                             <div>
                                 <label for="username"> Username </label>

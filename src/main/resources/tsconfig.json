@@ -4,11 +4,9 @@
         "noImplicitAny": true,
         "strict": true,
         "target": "ES2018",
-        "outDir": "dist",
+        "outDir": "dist"
     },
-    "include": [
-        "src/*.ts"
-    ],
+    "include": ["src/*.ts"],
     "watchOptions": {
         "watchFile": "useFsEvents",
         "watchDirectory": "useFsEvents",

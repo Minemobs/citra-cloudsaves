@@ -7,7 +7,7 @@
     "tailwind": "npx tailwindcss -m -i ./src/style.css -o ./dist/style.css --watch",
     "typescript": "npx tsc --watch",
     "dev": "npm-run-all -p -r tailwind typescript",
-    "build": "npx tailwindcss -m -i ./src/style.css -o ./dist/style.css; npx tsc"
+    "build": "npx tailwindcss -m -i ./src/style.css -o ./dist/style.css; npx tsc; node-minify --compressor uglify-es --input 'dist/main.js' --output 'dist/main.js'; node-minify --compressor html-minifier --input 'src/index.html' --output 'dist/index.html'"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,9 @@
   },
   "homepage": "https://github.com/minemobs/citra-cloudsave#readme",
   "devDependencies": {
+    "@node-minify/cli": "^8.0.6",
+    "@node-minify/html-minifier": "^8.0.6",
+    "@node-minify/uglify-es": "^8.0.6",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.8.8",
     "prettier-plugin-tailwindcss": "^0.3.0",

@@ -19,8 +19,8 @@ tasks.register("run-dev", NpmTask::class) {
 
 tasks.processResources {
     dependsOn(tasks.npmInstall, tasks.getByName("run-dev"))
-    filesNotMatching(arrayListOf("src/index.html", "dist/*")) { this.exclude() }
-    exclude(".vscode", "node_modules")
+    filesNotMatching(arrayListOf("dist/*")) { this.exclude() }
+    exclude(".vscode", "node_modules", "src/")
 }
 
 repositories {

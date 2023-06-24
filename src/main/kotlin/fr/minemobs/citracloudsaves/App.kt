@@ -67,12 +67,6 @@ fun main() {
     val app = Javalin.create { conf ->
         conf.staticFiles.add {
             it.hostedPath = "/"
-            it.directory = "/src"
-            it.location = Location.CLASSPATH
-            it.precompress = true
-        }
-        conf.staticFiles.add {
-            it.hostedPath = "/dist"
             it.directory = "/dist"
             it.location = Location.CLASSPATH
             it.precompress = false
