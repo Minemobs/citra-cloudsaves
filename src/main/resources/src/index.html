@@ -44,9 +44,12 @@
                     id="login"
                     class="rounded-md bg-indigo-500 p-5 shadow-sm backdrop-blur-0">
                     <div>
-                        <p class="select-none pb-5 text-center text-3xl">
+                        <p class="select-none pb-3 text-center text-3xl">
                             Login
                         </p>
+                        <div class="rounded-md bg-indigo-400 p-2 mb-4 shadow-sm justify-center items-center" style="display: none">
+                            <span class="text-center text-xl text-red-400"></span>
+                        </div>
                         <form
                             class="box-border rounded-lg w-[100%] flex flex-col gap-5"
                             onsubmit="onSubmit(event); return false">
@@ -91,7 +94,7 @@
             <footer
                 class="flex flex-row place-items-center justify-items-center rounded-t-lg bg-indigo-500 p-4 shadow-sm">
                 <p class="select-none pe-8">
-                    © 2023 <a href="https://github.com/minemobs">minemobs.</a>
+                    © 2023 <a href="https://github.com/minemobs" class="pl-2">minemobs.</a>
                 </p>
                 <p class="ml-auto select-none text-left">
                     Not endorsed by Citra

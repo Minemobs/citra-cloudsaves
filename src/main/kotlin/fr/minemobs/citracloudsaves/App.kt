@@ -31,10 +31,10 @@ object App {
                 path,
                 """
             {
-                "host": "localhost"
+                "host": "localhost",
                 "username": "YOUR_DB_USERNAME",
                 "password": "YOUR_DB_PASSWORD",
-                "database": "users",
+                "database": "citra-cloudsaves",
                 "collection": "user"
             }
             """.trimIndent(), StandardOpenOption.CREATE, StandardOpenOption.WRITE
@@ -71,6 +71,7 @@ fun main() {
             it.location = Location.CLASSPATH
             it.precompress = false
         }
+        conf.http.defaultContentType = ContentType.JSON
     }
         .post("register") {
             NaiveRateLimit.requestPerTimeUnit(it, 1, TimeUnit.MINUTES)
@@ -78,7 +79,7 @@ fun main() {
             if(collection.find(user.filters()).firstOrNull() != null) throw badRequestResponse(Error.USER_ALREADY_EXISTS)
             collection.insertOne(user.toDocument())
             val token = getToken(algorithm, user)
-            it.status(201).result(token)
+            it.status(201).result("""{"message": $token}""")
         }
         .post("login") {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
@@ -87,7 +88,7 @@ fun main() {
                 ?: throw notFoundResponse(Error.INVALID_AUTH)
             if(!verifyPassword(it, user)) throw notFoundResponse(Error.INVALID_AUTH)
             val token = getToken(algorithm, User.fromDocument(user))
-            it.result(token)
+            it.result("""{"message": $token}""")
         }
         .post("save/{gameID}") {
             val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
@@ -101,7 +102,7 @@ fun main() {
                     StandardOpenOption.TRUNCATE_EXISTING,
                     StandardOpenOption.CREATE
                 )
-                it.result("Received ur file!")
+                it.result("""{"message": "Received ur file!"}""")
             }
         }
         .get("save/{gameID}") {
@@ -114,7 +115,7 @@ fun main() {
             val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
             val path = gameSaveDir.resolve("${user.username}.save")
             if (!Files.deleteIfExists(path)) throw notFoundResponse(Error.COULDNT_FIND_SAVE)
-            it.result("Deleted your save")
+            it.result("""{"message": "Deleted your save"}""")
         }.events { it.serverStopping { mongoClient.close() } }
     Runtime.getRuntime().addShutdownHook(Thread { app.stop() })
     app.start(8888)

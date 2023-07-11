@@ -3,7 +3,10 @@
     "compilerOptions": {
         "noImplicitAny": true,
         "strict": true,
-        "target": "ES2018",
+        "noUncheckedIndexedAccess": true,
+        "skipLibCheck": true,
+        "strictNullChecks": true,
+        "target": "ES2022",
         "outDir": "dist"
     },
     "include": ["src/*.ts"],

@@ -1,15 +1,23 @@
-//TO EDIT
-//TODO: Put that back to https
-const API_URL = "http://localhost:8888/";
+const host = window.location.host;
+const API_URL = `http${host.startsWith("localhost:") ? "" : "s"}://${host}`;
 
-const isNotNull = <T>(
-    obj: T,
-    callback: (obj: NonNullable<T>) => void,
-    errorMessage: string
-) => {
-    if (obj == null) throw new Error(errorMessage);
-    callback(obj);
+type HttpErrorDetails = {
+    code: number;
+    message: string;
 };
+
+type HttpError = {
+    title: string;
+    status: number;
+    type: string;
+    details: HttpErrorDetails | undefined;
+};
+
+type HttpResponse = {
+    message: string;
+};
+
+type Result = HttpResponse | HttpError | Blob;
 
 onload = () => {
     const login = document.getElementById("login") as HTMLDialogElement;
@@ -18,56 +26,71 @@ onload = () => {
     login.parentElement!.append(register);
     (register.children[0]!.children[0]! as HTMLParagraphElement).textContent =
         "Register";
-    register.getElementsByClassName("no-account")[0].remove();
+    register.getElementsByClassName("no-account")[0]?.remove();
 };
 
-const loginClicked = (registration: boolean) => {
+function loginClicked(registration: boolean) {
     const dialog = document.getElementById(
         registration ? "register" : "login"
     ) as HTMLDialogElement;
     dialog.showModal();
-};
+}
 
-const handleRequest = async (
+async function handleAuthRequest(
     registration: boolean,
     username: string,
     password: string
-) => {
+) {
     let headers = new Headers();
     headers.append("username", username);
     headers.append("password", password);
     return await fetch(API_URL + (registration ? "register" : "login"), {
         method: "POST",
         headers: headers,
-    });
-};
+    })
+        .then((res) => {
+            if (!res.ok) return res.json();
+            const contentType = res.headers.get("content-type");
+            return !contentType ||
+                contentType.indexOf("application/json") !== -1
+                ? res.json()
+                : res.blob();
+        })
+        .then((value) => value as Promise<Result>);
+}
 
-const onSubmit = (event: SubmitEvent) => {
+const isError = (res: Result): res is HttpError => "status" in res;
+const isBlob = (res: Result): res is Blob => res instanceof Blob;
+
+function onSubmit(event: SubmitEvent) {
     const form = event.submitter!.parentElement! as HTMLFormElement;
     const dialog = event.submitter!.parentElement!.parentElement!
         .parentElement as HTMLDialogElement;
+    const errorElement = dialog.children[0]!.children[1]! as HTMLDivElement;
     const registration = dialog.id === "register";
 
-    const usernameElement = form.children[0].children[1] as HTMLInputElement;
-    const passwordElement = form.children[1].children[1] as HTMLInputElement;
+    let usernameElement = (form.children[0]!.children[1] as HTMLInputElement)
+        .value;
+    let passwordElement = (form.children[1]!.children[1] as HTMLInputElement)
+        .value;
 
-    handleRequest(registration, usernameElement.value, passwordElement.value)
+    handleAuthRequest(registration, usernameElement, passwordElement)
+        .then((res) => res as Exclude<Result, Blob>)
         .then((response) => {
-            //TODO: handle HTTP error codes
-            isNotNull(
-                document.getElementById("token-div"),
-                (div) => (div.style.display = ""),
-                "Element token-div is null"
-            );
-            isNotNull(
-                document.getElementById("token"),
-                async (p) => (p.textContent = await response.text()),
-                "Element token is null"
-            );
-            usernameElement.value = "";
-            passwordElement.value = "";
+            if (isError(response)) {
+                errorElement.children[0]!.textContent =
+                    response.details!.message;
+                errorElement.style.display = "flex";
+                return;
+            }
+
+            document.getElementById("token-div")!.style.display = "";
+            document.getElementById("token")!.textContent = response.message;
+
+            usernameElement = "";
+            passwordElement = "";
             dialog.close();
-        })
-        .catch(() => {});
+            errorElement.style.display = "none";
+        });
     return false;
-};
+}

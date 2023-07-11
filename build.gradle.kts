@@ -1,7 +1,8 @@
 import com.github.gradle.node.npm.task.NpmTask
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    id("org.jetbrains.kotlin.jvm") version "1.8.21"
+    kotlin("jvm") version "1.9.0"
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("com.github.node-gradle.node") version "5.0.0"
 
@@ -44,7 +45,7 @@ dependencies {
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
-            useKotlinTest("1.8.21")
+            useKotlinTest("1.9.0")
         }
     }
 }
@@ -52,6 +53,12 @@ testing {
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
