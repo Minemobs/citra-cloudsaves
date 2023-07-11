@@ -26,7 +26,9 @@ object App {
     @JvmSynthetic
     internal fun getConfig(): MongoConnection.MongoConfig? {
         val path = Path("secrets.json")
-        if (Files.notExists(path)) {
+        val env = System.getenv()
+        //Only need to check one env
+        if (Files.notExists(path) && !env.containsKey("MONGO_HOST")) {
             Files.writeString(
                 path,
                 """
@@ -40,6 +42,13 @@ object App {
             """.trimIndent(), StandardOpenOption.CREATE, StandardOpenOption.WRITE
             )
             return null
+        } else if(env.containsKey("MONGO_HOST")) {
+            val host = env["MONGO_HOST"] ?: return null
+            val username = env["MONGO_USERNAME"] ?: return null
+            val password = env["MONGO_PASSWORD"] ?: return null
+            val database = env["MONGO_DATABASE"] ?: return null
+            val collection = env["MONGO_COLLECTION"] ?: return null
+            return MongoConnection.MongoConfig(host, username, password.toCharArray(), database, collection)
         }
         Files.newBufferedReader(path).use {
             val obj = GSON.fromJson(it, JsonObject::class.java)

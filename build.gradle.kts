@@ -19,7 +19,7 @@ tasks.register("run-dev", NpmTask::class) {
 }
 
 tasks.processResources {
-    dependsOn(tasks.npmInstall, tasks.getByName("run-dev"))
+    if(!project.hasProperty("docker")) dependsOn(tasks.npmInstall, tasks.getByName("run-dev"))
     filesNotMatching(arrayListOf("dist/*")) { this.exclude() }
     exclude(".vscode", "node_modules", "src/")
 }

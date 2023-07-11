@@ -1,0 +1,14 @@
+version: '3.1'
+
+services:
+  citra-cloudsaves:
+    image: minemobs/citra-cloudsaves:1.0
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      MONGO_HOST: YOUR_DB_IP # You should use your local ip not localhost if you also use mongo for docker
+      MONGO_USERNAME: YOUR_DB_USERNAME
+      MONGO_PASSWORD: YOUR_DB_PASSWORD
+      MONGO_DATABASE: YOUR_DATABASE_NAME # Default in json is citra-cloudsaves
+      MONGO_COLLECTION: YOUR_DATABASE_COLLECTION # Default in json is user

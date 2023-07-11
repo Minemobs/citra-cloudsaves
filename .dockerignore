@@ -1,0 +1,12 @@
+build
+!build/libs/
+.gradle
+saves
+src/test
+src/main/resources/node_modules
+src/main/resources/dist
+src/main/resources/.gitignore
+src/main/resources/package-lock.json
+secrets.json
+.key.pub
+.key.txt
