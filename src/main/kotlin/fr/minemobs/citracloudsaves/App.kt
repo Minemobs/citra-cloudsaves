@@ -88,7 +88,7 @@ fun main() {
             if(collection.find(user.filters()).firstOrNull() != null) throw badRequestResponse(Error.USER_ALREADY_EXISTS)
             collection.insertOne(user.toDocument())
             val token = getToken(algorithm, user)
-            it.status(201).result("""{"message": $token}""")
+            it.status(201).result("""{"message": "$token"}""")
         }
         .post("login") {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
@@ -97,7 +97,7 @@ fun main() {
                 ?: throw notFoundResponse(Error.INVALID_AUTH)
             if(!verifyPassword(it, user)) throw notFoundResponse(Error.INVALID_AUTH)
             val token = getToken(algorithm, User.fromDocument(user))
-            it.result("""{"message": $token}""")
+            it.result("""{"message": "$token"}""")
         }
         .post("save/{gameID}") {
             val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
