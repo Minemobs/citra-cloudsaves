@@ -1,5 +1,5 @@
 const host = window.location.host;
-const API_URL = `http${host.startsWith("localhost:") ? "" : "s"}://${host}`;
+const API_URL = `http${host.startsWith("localhost:") ? "" : "s"}://${host}/`;
 
 type HttpErrorDetails = {
     code: number;
