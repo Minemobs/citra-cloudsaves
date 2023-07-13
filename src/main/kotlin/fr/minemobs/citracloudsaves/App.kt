@@ -70,8 +70,8 @@ fun main() {
     val config = App.getConfig()
         ?: throw NullPointerException("Couldn't connect to the DB due to the 'secrets.json' secrets not being valid.")
     val mongoClient = MongoConnection.createMongoClient(config)
-    val usersDB = mongoClient.getDatabase("users")
-    val collection = usersDB.getCollection("user")
+    val usersDB = mongoClient.getDatabase(config.database)
+    val collection = usersDB.getCollection(config.collection)
 
     val app = Javalin.create { conf ->
         conf.staticFiles.add {
