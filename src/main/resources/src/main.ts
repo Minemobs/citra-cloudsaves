@@ -10,7 +10,7 @@ type HttpError = {
     title: string;
     status: number;
     type: string;
-    details: HttpErrorDetails | undefined;
+    details: HttpErrorDetails | {};
 };
 
 type HttpResponse = {
@@ -59,9 +59,6 @@ async function handleAuthRequest(
         .then((value) => value as Promise<Result>);
 }
 
-const isError = (res: Result): res is HttpError => "status" in res;
-const isBlob = (res: Result): res is Blob => res instanceof Blob;
-
 function onSubmit(event: SubmitEvent) {
     const form = event.submitter!.parentElement! as HTMLFormElement;
     const dialog = event.submitter!.parentElement!.parentElement!
@@ -77,9 +74,14 @@ function onSubmit(event: SubmitEvent) {
     handleAuthRequest(registration, usernameElement, passwordElement)
         .then((res) => res as Exclude<Result, Blob>)
         .then((response) => {
-            if (isError(response)) {
-                errorElement.children[0]!.textContent =
-                    response.details!.message;
+            if ("status" in response) {
+                let errorMessage = "";
+                if ("code" in response.details)
+                    errorMessage = response.details.message;
+                else if (response.status == 429)
+                    errorMessage = "Too many requests, try again in a minute";
+                else errorMessage = response.title;
+                errorElement.children[0]!.textContent = errorMessage;
                 errorElement.style.display = "flex";
                 return;
             }
