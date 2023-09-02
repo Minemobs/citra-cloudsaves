@@ -34,5 +34,5 @@ object RequestUtils {
         return bearer[1]
     }
 
-    fun toSuccessfulResponse(content: String) = "{\"message\": $content}"
+    fun toSuccessfulResponse(content: String) = "{\"message\": \"$content\"}"
 }
