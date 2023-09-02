@@ -33,4 +33,6 @@ object RequestUtils {
         if (bearer.size != 2 || bearer[0] != "Bearer") throw badRequestResponse(Error.INVALID_AUTHORIZATION_HEADER)
         return bearer[1]
     }
+
+    fun toSuccessfulResponse(content: String) = "{\"message\": $content}"
 }

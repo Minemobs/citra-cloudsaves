@@ -7,7 +7,9 @@ import com.auth0.jwt.exceptions.JWTDecodeException
 import com.auth0.jwt.interfaces.DecodedJWT
 import fr.minemobs.citracloudsaves.Error.Companion.badRequestResponse
 import fr.minemobs.citracloudsaves.Error.Companion.unauthorizedResponse
+import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
+import io.javalin.http.UnauthorizedResponse
 import io.javalin.http.util.NaiveRateLimit
 import java.io.IOException
 import java.nio.file.Files
@@ -66,7 +68,7 @@ object JWTUtils {
             .sign(algorithm)
     }
 
-    fun DecodedJWT.verifyToken(algorithm: Algorithm): DecodedJWT? {
+    private fun DecodedJWT.verifyToken(algorithm: Algorithm): DecodedJWT? {
         return try {
             JWT.require(algorithm)
                 .withIssuer("minemobs")
@@ -76,10 +78,11 @@ object JWTUtils {
         }
     }
 
+    @Throws(UnauthorizedResponse::class, BadRequestResponse::class)
     fun initSaveRequest(ctx: Context, algorithm: Algorithm, saveDir: Path) : Pair<User, Path> {
         NaiveRateLimit.requestPerTimeUnit(ctx, 3, TimeUnit.MINUTES)
-        if(!ctx.pathParam("gameID").matches(Regex("\\d+"))) throw badRequestResponse(Error.INVALID_GAME_ID)
         val token = decodeAndVerify(RequestUtils.getAuthorizationToken(ctx), algorithm) ?: throw unauthorizedResponse(Error.INVALID_TOKEN)
+        if(!ctx.pathParam("gameID").matches(Regex("00040000[0-9a-fA-F]{8}"))) throw badRequestResponse(Error.INVALID_TITLE_ID)
         val user = User.fromJWT(token)
         val gameSaveDir = saveDir.resolve(ctx.pathParam("gameID"))
         if(Files.notExists(gameSaveDir)) Files.createDirectory(gameSaveDir)

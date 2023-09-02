@@ -30,7 +30,7 @@ repositories {
 
 dependencies {
     //HTTP
-    implementation("io.javalin:javalin:5.6.0")
+    implementation("io.javalin:javalin:5.6.2")
     implementation("org.slf4j:slf4j-simple:2.0.7")
     //DB
     implementation("org.mongodb:mongodb-driver-sync:4.9.1")

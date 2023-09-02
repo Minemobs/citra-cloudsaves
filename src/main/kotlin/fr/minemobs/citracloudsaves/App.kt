@@ -9,6 +9,7 @@ import fr.minemobs.citracloudsaves.JWTUtils.getAlgorithm
 import fr.minemobs.citracloudsaves.JWTUtils.getToken
 import fr.minemobs.citracloudsaves.JWTUtils.initSaveRequest
 import fr.minemobs.citracloudsaves.RequestUtils.getUser
+import fr.minemobs.citracloudsaves.RequestUtils.toSuccessfulResponse
 import fr.minemobs.citracloudsaves.RequestUtils.verifyPassword
 import io.javalin.Javalin
 import io.javalin.http.ContentType
@@ -88,7 +89,7 @@ fun main() {
             if(collection.find(user.filters()).firstOrNull() != null) throw badRequestResponse(Error.USER_ALREADY_EXISTS)
             collection.insertOne(user.toDocument())
             val token = getToken(algorithm, user)
-            it.status(201).result("""{"message": "$token"}""")
+            it.status(201).result(toSuccessfulResponse(token))
         }
         .post("login") {
             NaiveRateLimit.requestPerTimeUnit(it, 3, TimeUnit.MINUTES)
@@ -97,12 +98,13 @@ fun main() {
                 ?: throw notFoundResponse(Error.INVALID_AUTH)
             if(!verifyPassword(it, user)) throw notFoundResponse(Error.INVALID_AUTH)
             val token = getToken(algorithm, User.fromDocument(user))
-            it.result("""{"message": "$token"}""")
+            it.result(toSuccessfulResponse(token))
         }
         .post("save/{gameID}") {
             val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
 
             val file = it.uploadedFile("save") ?: throw badRequestResponse(Error.REQUEST_MISSING_SAVE_FILE)
+            if(file.size() > 1e6) throw badRequestResponse(Error.SAVE_TOO_LARGE)
             file.contentAndClose { content ->
                 Files.write(
                     gameSaveDir.resolve("${user.username}.save"),
@@ -111,20 +113,20 @@ fun main() {
                     StandardOpenOption.TRUNCATE_EXISTING,
                     StandardOpenOption.CREATE
                 )
-                it.result("""{"message": "Received ur file!"}""")
+                it.result(toSuccessfulResponse("Received ur file!"))
             }
         }
         .get("save/{gameID}") {
             val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
             val path = gameSaveDir.resolve("${user.username}.save")
-            if (Files.notExists(path)) throw notFoundResponse(Error.COULDNT_FIND_SAVE)
+            if (Files.notExists(path)) throw notFoundResponse(Error.COULD_NOT_FIND_YOUR_SAVE_FILE)
             val bytes = Files.readAllBytes(saveDir.resolve(it.pathParam("gameID")).resolve("${user.username}.save"))
             it.contentType(ContentType.OCTET_STREAM).result(bytes)
         }.delete("save/{gameID}") {
             val (user, gameSaveDir) = initSaveRequest(it, algorithm, saveDir)
             val path = gameSaveDir.resolve("${user.username}.save")
-            if (!Files.deleteIfExists(path)) throw notFoundResponse(Error.COULDNT_FIND_SAVE)
-            it.result("""{"message": "Deleted your save"}""")
+            if (!Files.deleteIfExists(path)) throw notFoundResponse(Error.COULD_NOT_FIND_YOUR_SAVE_FILE)
+            it.result(toSuccessfulResponse("Deleted your save"))
         }.events { it.serverStopping { mongoClient.close() } }
     Runtime.getRuntime().addShutdownHook(Thread { app.stop() })
     app.start(8888)
